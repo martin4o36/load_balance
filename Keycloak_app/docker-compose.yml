@@ -1,0 +1,80 @@
+version: "3"
+services:
+  database-1:
+    image: mariadb:11.4.2
+    ports:
+      - "3307:3306"
+    env_file:
+      - utils/database.env
+    volumes:
+      - database-1-data:/var/lib/mysql
+      - database-1-galera.cnf:/etc/mysql/conf.d
+
+
+  database-2:
+    image: mariadb:11.4.2
+    ports:
+      - "3308:3306"
+    depends_on:
+      - database-1
+    env_file:
+      - utils/database.env
+    volumes:
+      - database-2-data:/var/lib/mysql
+      - database-2-galera.cnf:/etc/mysql/conf.d
+
+
+  db-loadbalancer:
+    image: mariadb/maxscale:24.02.1
+    ports:
+      - "3306:3306"
+      - "8989:8989"
+    depends_on:
+      - database-1
+      - database-2
+    volumes:
+      - db-loadbalancer-config:/etc/maxscale
+      - ./utils/maxscale.cnf:/etc/maxscale.cnf
+
+
+  keycloak:
+    image: keycloak/keycloak:24.0.4
+    env_file: 
+      - utils/keyCloak.env
+    command: start-dev
+    ports:
+      - '8080:8080'
+    volumes:
+      - keycloak:/opt/keycloak/data
+
+
+  python-app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - keycloak
+      - db-loadbalancer
+
+
+  react-app:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - python-app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm start
+
+
+volumes:
+  keycloak:
+  database-1-data:
+  database-1-galera.cnf:
+  database-2-data:
+  database-2-galera.cnf:
+  db-loadbalancer-config:

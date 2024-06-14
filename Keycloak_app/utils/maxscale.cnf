@@ -1,0 +1,36 @@
+[maxscale]
+threads=auto
+
+# Define the servers
+[server1]
+type=server
+address=database-1
+port=3306
+protocol=MariaDBBackend
+
+[server2]
+type=server
+address=database-2
+port=3306
+protocol=MariaDBBackend
+
+# Define the service
+[MySQL-Monitor]
+type=monitor
+module=mariadbmon
+servers=server1,server2
+user=user
+passwd=password
+
+[Read-Write-Service]
+type=service
+router=readwritesplit
+servers=server1,server2
+user=user
+passwd=password
+
+[Read-Write-Listener]
+type=listener
+service=Read-Write-Service
+protocol=MariaDBClient
+port=3306
